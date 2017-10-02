@@ -4,7 +4,7 @@ import Types
 import Checks
 
 teamMembers :: String 
-teamMembers = "Jonathan Chan, Vivian Yung"
+teamMembers = "Jonathan Chan,   Vivian Yung"
 
 playerSooperHooman :: Player 
 playerSooperHooman = Player gomokuMinMax "SooperHooman"
