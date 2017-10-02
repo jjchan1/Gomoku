@@ -5,6 +5,7 @@ import Checks
 import Misc 
 import Players 
 
+import Player.SooperHuman (playerSooperHooman)
 import Player.BestNext    (playerBestNext )
 import Player.Human       (playerHuman    )
 import Player.Computer    (playerComputer )
