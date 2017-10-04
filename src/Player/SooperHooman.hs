@@ -4,7 +4,7 @@ import Types
 import Checks
 
 teamMembers :: String 
-teamMembers = "Jonathan Chan,   Vivian Yung"
+teamMembers = "Jonathan Chan, Vivian Yung"
 
 playerSooperHooman :: Player 
 playerSooperHooman = Player gomokuMinMax "SooperHooman"
@@ -53,12 +53,12 @@ numInDiag (row, col) tile board seen
 
 score :: Int -> Int
 score x
-				| x == 1    = round(10**1)
-				| x == 2    = round(10**2)
-				| x == 3    = round(10**4)
-				| x == 4    = round(10**6)
-				| x == 5    = round(10**10)
-				| otherwise	= 0
+  | x == 1    = 10^1
+  | x == 2    = 10^2
+  | x == 3    = 10^4
+  | x == 4    = 10^6
+  | x == 5    = 10^10
+  | otherwise = 0
 
 evaluarTablero :: Tile -> Board -> Int
 evaluarTablero tile board = 
@@ -74,7 +74,8 @@ gomokuMinMax tile board
   = return $ snd $ maximum scoredMoves
   where
     scoredMoves = zip scores moves
-    scores      = map (evaluateBoardMax tile . put board tile) moves
+    scores      = map (evaluarTablero tile . put board tile) moves
+    -- scores      = map (evaluateBoardMax tile . put board tile) moves
     -- moves       = validMoves' row col
     moves       = validMoves board
 
