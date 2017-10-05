@@ -29,44 +29,79 @@ validMoves' (row, col) b =
 
 numInCol :: Move -> Tile -> Board -> Int -> Int
 numInCol (row, col) tile board seen
- | (board??(row, col)) == EmptyTile   = seen
- | (board??(row, col)) /= tile        = seen
-numInCol (row, col) tile board seen
- | (board??(row+1, col)) == EmptyTile = seen
- | otherwise = numInCol (row+1, col) tile board (seen+1)
+  | (board??(row, col)) == EmptyTile = seen
+  | (board??(row, col)) /= tile      = seen
+  | (board??(row, col)) == tile      = numInCol (row+1, col) tile board (seen+1)
+  | otherwise                        = seen -- hit edge of board
 
 numInRow :: Move -> Tile -> Board -> Int -> Int
 numInRow (row, col) tile board seen
- | (board??(row, col)) == EmptyTile   = seen
- | (board??(row, col)) /= tile        = seen
-numInRow (row, col) tile board seen
- | (board??(row, col+1)) == EmptyTile = seen
- | otherwise = numInRow (row, col+1) tile board (seen+1)
+  | (board??(row, col)) == EmptyTile = seen
+  | (board??(row, col)) /= tile      = seen
+  | (board??(row, col)) == tile      = numInRow (row, col+1) tile board (seen+1)
+  | otherwise                        = seen -- hit edge of board
 
-numInDiag :: Move -> Tile -> Board -> Int -> Int
-numInDiag (row, col) tile board seen
- | (board??(row, col)) == EmptyTile     = seen
- | (board??(row, col)) /= tile          = seen
-numInDiag (row, col) tile board seen
- | (board??(row+1, col+1)) == EmptyTile = seen
- | otherwise = numInDiag (row+1, col+1) tile board (seen+1)
+numInDiagTLBR :: Move -> Tile -> Board -> Int -> Int
+numInDiagTLBR (row, col) tile board seen
+  | (board??(row, col)) == EmptyTile = seen
+  | (board??(row, col)) /= tile      = seen
+  | (board??(row, col)) == tile      = numInDiagTLBR (row+1, col+1) tile board (seen+1)
+  | otherwise                        = seen -- hit edge of board
+
+numInDiagTRBL :: Move -> Tile -> Board -> Int -> Int
+numInDiagTRBL (row, col) tile board seen
+  | (board??(row, col)) == EmptyTile = seen
+  | (board??(row, col)) /= tile      = seen
+  | (board??(row, col)) == tile      = numInDiagTRBL (row+1, col-1) tile board (seen+1)
+  | otherwise                        = seen -- hit edge of board  
 
 score :: Int -> Int
 score x
-  | x == 1    = 10^1
-  | x == 2    = 10^2
-  | x == 3    = 10^4
-  | x == 4    = 10^6
-  | x == 5    = 10^10
+  | x == 1    = 5
+  | x == 2    = 20
+  | x == 3    = 40
+  | x == 4    = 100
+  | x == 5    = 1000
   | otherwise = 0
+
+pair_up :: [Int] -> [Int] -> [(Int, Int)]
+pair_up x y = 
+  let pairs = map (\p -> map (\q -> (p,q)) y) x in
+    concat pairs
+
+pair_up' :: [Int] -> [Int] -> [(Int, Int)]
+pair_up' xs ys = do
+  x <- xs
+  y <- ys
+  return (x,y)    
 
 evaluarTablero :: Tile -> Board -> Int
 evaluarTablero tile board = 
-  let colScore = map (\row -> sum $ map (\col -> score $ numInCol (row, col) tile board 0) [1..(dimN dim)]) [1..(dimM dim)] in
-    let rowScore = map (\row -> sum $ map (\col -> score $ numInRow (row, col) tile board 0) [1..(dimN dim)]) [1..(dimM dim)] in
-      let diagScore = map (\row -> sum $ map (\col -> score $ numInDiag (row, col) tile board 0) [1..(dimN dim)]) [1..(dimM dim)] in
-        let totalScore = colScore ++ rowScore ++ diagScore in
-          sum totalScore
+  let colScore = map (\row -> map (\col -> score $ numInCol (row, col) tile board 0) [1..(dimN dim)]) [1..(dimM dim)] in
+    let rowScore = map (\row -> map (\col -> score $ numInRow (row, col) tile board 0) [1..(dimN dim)]) [1..(dimM dim)] in
+      let diagScoreTLBR = map (\row -> map (\col -> score $ numInDiagTLBR (row, col) tile board 0) [1..(dimN dim)]) [1..(dimM dim)] in
+        let diagScoreTRBL = map (\row -> map (\col -> score $ numInDiagTRBL (row, col) tile board 0) [1..(dimN dim)]) [1..(dimM dim)] in
+          let totalScore = colScore ++ rowScore ++ diagScoreTLBR ++ diagScoreTRBL in
+            sum totalScore
+
+evaluarTablero' :: Tile -> Board -> Int
+evaluarTablero' tile board =
+  let positions = pair_up' [1..(dimN dim)] [1..(dimM dim)] in
+    let fourple = foldl (\scores p -> ((score $ numInCol p tile board),
+                         (score $ numInRow p tile board), 
+    	                 (score $ numInDiagTRBL p tile board),
+    	                 (score $ numInDiagTLBR p tile board)):scores) [] positions in
+      let (a,b,c,d) = fourple in
+        a+b+c+d
+
+-- evaluarTablero :: Tile -> Board -> Int
+-- evaluarTablero tile board = 
+--   let colScore = map (\row -> sum $ map (\col -> score $ numInCol (row, col) tile board 0) [1..(dimN dim)]) [1..(dimM dim)] in
+--     let rowScore = map (\row -> sum $ map (\col -> score $ numInRow (row, col) tile board 0) [1..(dimN dim)]) [1..(dimM dim)] in
+--       let diagScoreTLBR = map (\row -> sum $ map (\col -> score $ numInDiagTLBR (row, col) tile board 0) [1..(dimN dim)]) [1..(dimM dim)] in
+--         let diagScoreTRBL = map (\row -> sum $ map (\col -> score $ numInDiagTRBL (row, col) tile board 0) [1..(dimN dim)]) [1..(dimM dim)] in
+--           let totalScore = colScore ++ rowScore ++ diagScoreTLBR ++ diagScoreTRBL in
+--             sum totalScore
 
 
 gomokuMinMax :: Tile -> Board -> IO Move
@@ -78,6 +113,40 @@ gomokuMinMax tile board
     -- scores      = map (evaluateBoardMax tile . put board tile) moves
     -- moves       = validMoves' row col
     moves       = validMoves board
+
+gomokuMinMax' :: Tile -> Board -> IO Move
+gomokuMinMax' tile board =
+  let moves = validMoves board in
+    let scores = map (evaluarTablero tile . put board tile) moves in
+      let scoredMoves = zip scores moves in
+	    if mod (length (validMoves board)) 2 == 0 then return $ snd $ maximum scoredMoves
+	    else return $ snd $ minimum scoredMoves
+
+-- gomokuMinMax'' :: Tile -> Board -> IO Move
+-- gomokuMinMax'' tile board =
+-- 	if board == emptyBoard then return (8,8)
+-- 	else if length (validMoves board) == ((dimN * dimM)-1) then
+-- 	  if (board??(8,8)) == EmptyTile then return (8,8)
+-- 	  else return (7,7)
+-- 	else return $ snd $ maximum scoredMoves
+-- 	  where
+-- 	    scoredMoves = zip scores moves
+-- 	    scores      = map (evaluarTablero tile . put board tile) moves
+-- 	    -- scores      = map (evaluateBoardMax tile . put board tile) moves
+-- 	    -- moves       = validMoves' row col
+-- 	    moves       = validMoves board
+
+gomokuMinMax'' :: Tile -> Board -> IO Move
+gomokuMinMax'' tile board 
+  | board == emptyBoard                            = return (8,8)
+  | length (validMoves board) == ((dimN * dimM)-1) = 
+  	                                                  if (board??(8,8)) == EmptyTile = return (8,8)
+  	                                                  else return (7,7)
+  | otherwise            	                       = return $ snd $ maximum scoredMoves
+													   where
+													     scoredMoves = zip scores moves
+													     scores      = map (evaluarTablero tile . put board tile) moves
+													     moves       = validMoves board                                        
 
 -- evaluateBoardMax' :: Tile -> Board -> Int
 -- evaluateBoardMax' tile board =
