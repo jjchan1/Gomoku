@@ -27,6 +27,19 @@ validMoves' (row, col) b =
     let allValidMoves = foldl (\a x -> if (b??x) == EmptyTile then a++[x] else a) [] allPossibleMoves in
       allValidMoves
 
+-- find all "tile"-marked positions
+-- let potentialMoves = find valid moves surrounding these positions (validMoves')
+-- continue with minmax algorithm using potentialMoves
+-- only considers realistic potential moves instead of every possible move
+findOldMoves :: Tile -> Board -> [Move]
+findOldMoves tile board = [ij | (ij, t) <- board, t == tile]
+
+potentialMoves :: Tile -> Board -> [Move]
+potentialMoves tile board = 
+  let oldMoves = findOldMoves tile board in
+    let allValidMoves = (foldl (\acc move -> (validMoves' move board)++acc) [] oldMoves) in
+      allValidMoves
+
 numInCol :: Move -> Tile -> Board -> Int -> Int
 numInCol (row, col) tile board seen
   | (board??(row, col)) == EmptyTile = seen
@@ -84,8 +97,10 @@ pair_up' xs ys = do
 --           let totalScore = colScore ++ rowScore ++ diagScoreTLBR ++ diagScoreTRBL in
 --             sum totalScore
 
-evaluarTablero' :: Tile -> Board -> Int
-evaluarTablero' tile board =
+-- Given a board with a potential new move placed, calculates the summed (fourple) score of each position
+-- returns the maximum summed score  
+maxSumFourpleFinder :: Tile -> Board -> Int
+maxSumFourpleFinder tile board =
   let positions = pair_up' [1..(dimN dim)] [1..(dimM dim)] in
     let fourples = foldl (\scores p -> ((score $ numInCol p tile board 0) +
                         (score $ numInRow p tile board 0) + 
@@ -93,6 +108,32 @@ evaluarTablero' tile board =
     	                  (score $ numInDiagTLBR p tile board 0)):scores) [] positions in
       maximum fourples
 
+maxSumFourpleFinder' tile board =
+  let positions = pair_up' [1..(dimN dim)] [1..(dimM dim)] in
+    let fourples = foldl (\scores p -> ((score $ numInCol p tile board 0),
+                        (score $ numInRow p tile board 0), 
+                        (score $ numInDiagTRBL p tile board 0),
+                        (score $ numInDiagTLBR p tile board 0)):scores) [] positions in
+      fourples
+      
+-- Given a board with a potential new move placed, calculates the summed (fourple) score of each position
+-- returns the minimum summed score (aka a position with a score of 0...)
+minSumFourpleFinder :: Tile -> Board -> Int
+minSumFourpleFinder tile board =
+  let positions = pair_up' [1..(dimN dim)] [1..(dimM dim)] in
+    let fourples = foldl (\scores p -> ((score $ numInCol p tile board 0) +
+                        (score $ numInRow p tile board 0) + 
+                        (score $ numInDiagTRBL p tile board 0)+
+                        (score $ numInDiagTLBR p tile board 0)):scores) [] positions in
+      minimum (filter (>0) fourples)
+
+minSumFourpleFinder' tile board =
+  let positions = pair_up' [1..(dimN dim)] [1..(dimM dim)] in
+    let fourples = foldl (\scores p -> ((score $ numInCol p tile board 0) +
+                        (score $ numInRow p tile board 0) + 
+                        (score $ numInDiagTRBL p tile board 0)+
+                        (score $ numInDiagTLBR p tile board 0)):scores) [] positions in
+      (filter (>0) fourples)
 -- evaluarTablero :: Tile -> Board -> Int
 -- evaluarTablero tile board = 
 --   let colScore = map (\row -> sum $ map (\col -> score $ numInCol (row, col) tile board 0) [1..(dimN dim)]) [1..(dimM dim)] in
@@ -143,8 +184,8 @@ gomokuMinMax'' tile board
   | otherwise            	                         = return $ snd $ maximum scoredMoves
 													   where
 													     scoredMoves = zip scores moves
-													     scores      = map (evaluarTablero' tile . put board tile) moves
-													     moves       = validMoves board                                        
+													     scores      = map (evaluateBoardMax' 0 tile . put board tile) moves
+													     moves       = potentialMoves tile board                                        
 
 -- evaluateBoardMax' :: Tile -> Board -> Int
 -- evaluateBoardMax' tile board =
@@ -155,14 +196,32 @@ gomokuMinMax'' tile board
 --   	  				  let allBoardScores = map (evaluateBoardMin (flipTile tile)) newBoards in
 --   	  				   minimum allBoardScores
 
+
+evaluateBoardMax' :: Int -> Tile -> Board -> Int
+evaluateBoardMax' depth tile board  
+  | depth == 0 = maxSumFourpleFinder tile board 
+  | otherwise = let allValidMoves = potentialMoves tile board in
+                   let newBoards = map (put board (flipTile tile)) allValidMoves in
+                     let allBoardScores = map (evaluateBoardMin' (depth - 1) (flipTile tile)) newBoards in
+                       minimum allBoardScores
+
+evaluateBoardMin' :: Int -> Tile -> Board -> Int
+evaluateBoardMin' depth tile board 
+  | depth == 0 = minSumFourpleFinder (flipTile tile) board
+  | otherwise = let allValidMoves = potentialMoves (flipTile tile) board in 
+                  let newBoards = map (put board (flipTile tile)) allValidMoves in
+                    let allBoardScores = map (evaluateBoardMax' (depth - 1) (flipTile tile)) newBoards in 
+                      maximum allBoardScores
+
+
 evaluateBoardMax :: Tile -> Board -> Int
 evaluateBoardMax tile board =
-  	  case scoreBoard tile board of
-  	  	Just x  -> x
-  	  	Nothing -> let allValidMoves = validMoves board in 
-  	  	             let newBoards = map (put board (flipTile tile)) allValidMoves in
-  	  				   let allBoardScores = map (evaluateBoardMin (flipTile tile)) newBoards in
-  	  				     minimum allBoardScores
+      case scoreBoard tile board of
+        Just x  -> x
+        Nothing -> let allValidMoves = validMoves board in 
+                     let newBoards = map (put board (flipTile tile)) allValidMoves in
+                 let allBoardScores = map (evaluateBoardMin (flipTile tile)) newBoards in
+                   minimum allBoardScores
 
 evaluateBoardMin :: Tile -> Board -> Int
 evaluateBoardMin tile board =
@@ -172,3 +231,5 @@ evaluateBoardMin tile board =
   	  				 let newBoards = map (put board (flipTile tile)) allValidMoves in
   	  				   let allBoardScores = map (evaluateBoardMax (flipTile tile)) newBoards in
   	  				     maximum allBoardScores 
+
+
