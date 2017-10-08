@@ -152,3 +152,14 @@ gomokuMinMax tile board
                                                                  ownNetGains = netGainMoves ownScoredMoves tile board
                                                                  otherNetGains = netGainMoves otherScoredMoves (flipTile tile) board
                                                                  bestMove = watDooooooooooooooo ownNetGains otherNetGains
+
+-- Citations: 
+
+-- Credits go to the paper titled "Go-Moku and Threat-Space Search" by L.V. Allis and M.P.H Huntjens which 
+-- helped us determine our overall strategy for creating a Go-Moku player. We learned about the most optimal
+-- first and second moves from this paper.
+
+-- Credits also go to Oren Finard (GitHub user Nero144) and Github user guzziksen96. Their implementations of Gomoku 
+-- helped us develop a scoring system.  
+-- https://raw.githubusercontent.com/Nero144/Gomoku/master/README.txt    
+-- https://github.com/guzziksen96/Gomoku/blob/master/Board.hs
